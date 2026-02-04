@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Media Kit</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-bg: #eef2ff;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* HEADER */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: center;
+        }
+        .header-content { max-width: 1200px; width: 100%; display: flex; justify-content: space-between; align-items: center; }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; }
+        .badge { background: var(--primary-bg); color: var(--primary); font-size: 0.75rem; padding: 4px 10px; border-radius: 99px; font-weight: 600; }
+
+        /* CONTROLS */
+        .config-bar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+            display: flex;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .config-content {
+            max-width: 1200px; width: 100%; padding: 0 1.5rem; display: flex; gap: 2rem; align-items: center; flex-wrap: wrap;
+        }
+
+        .control-section { display: flex; gap: 1.5rem; align-items: center; border-right: 1px solid var(--border); padding-right: 1.5rem; }
+        .control-section:last-child { border-right: none; }
+
+        .input-group { display: flex; flex-direction: column; gap: 4px; }
+        .input-group label { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+        .control-input {
+            border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.9rem;
+            color: var(--text-main); background: #f1f5f9; transition: 0.2s;
+        }
+        .control-input:focus { background: white; border-color: var(--primary); outline: none; }
+
+        /* Toggles */
+        .toggle-label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 500; cursor: pointer; user-select: none; }
+        .toggle-switch {
+            position: relative; width: 36px; height: 20px; background: #cbd5e1; border-radius: 20px; transition: 0.2s;
+        }
+        .toggle-switch::after {
+            content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: 0.2s;
+        }
+        input[type="checkbox"]:checked + .toggle-switch { background: var(--primary); }
+        input[type="checkbox"]:checked + .toggle-switch::after { transform: translateX(16px); }
+        input[type="checkbox"] { display: none; }
+
+        /* MAIN LAYOUT */
+        main {
+            max-width: 1200px; width: 100%; margin: 0 auto; padding: 2rem 1.5rem; display: flex; flex-direction: column; gap: 2rem; flex: 1;
+        }
+
+        /* UPLOAD */
+        .upload-zone {
+            background: var(--surface); border: 2px dashed var(--border); border-radius: var(--radius);
+            padding: 3rem 2rem; text-align: center; cursor: pointer; transition: all 0.2s ease;
+            display: flex; flex-direction: column; align-items: center; gap: 1rem;
+        }
+        .upload-zone:hover, .upload-zone.drag-over { border-color: var(--primary); background-color: var(--primary-bg); transform: translateY(-2px); }
+        .icon-box {
+            width: 50px; height: 50px; background: var(--primary-bg); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; color: var(--primary);
+        }
+
+        /* CARDS */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+        .card {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+            box-shadow: var(--shadow); display: flex; flex-direction: column; animation: slideIn 0.3s ease-out; position: relative;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .img-preview {
+            height: 200px; background-color: #f1f5f9;
+            background-image: linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+            background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            display: flex; align-items: center; justify-content: center; padding: 20px; border-bottom: 1px solid var(--border);
+            position: relative;
+        }
+        .img-preview img { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+
+        .edit-btn {
+            position: absolute; top: 10px; right: 10px; background: white; border: 1px solid var(--border);
+            border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 6px; color: var(--text-main);
+            transition: all 0.2s;
+        }
+        .edit-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+        .card-details { padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+        .file-name { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .specs { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); }
+        .size-tag { background: #dcfce7; color: #166534; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+        .size-tag.warning { background: #fee2e2; color: #991b1b; }
+
+        .btn-download {
+            background: var(--text-main); color: white; text-align: center; padding: 0.6rem;
+            border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: 500;
+            margin-top: 0.5rem; transition: background 0.2s;
+        }
+        .btn-download:hover { background: #334155; }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85);
+            z-index: 100; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;
+        }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .modal-content {
+            background: white; width: 95%; max-width: 900px; height: 85vh; border-radius: 12px;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .modal-header, .modal-footer { padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { flex: 1; background: #1e293b; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+
+        .btn { padding: 8px 16px; border-radius: 6px; font-size: 0.9rem; font-weight: 500; cursor: pointer; border: none; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .btn-secondary { background: white; border: 1px solid var(--border); }
+        .btn-primary { background: var(--primary); color: white; }
+
+        /* FOOTER */
+        footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border);
+            padding: 2rem;
+            background: var(--surface);
+            display: flex;
+            justify-content: center;
+        }
+        .footer-content {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .footer-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+        .footer-link:hover { color: var(--primary); }
+        .divider { color: var(--border); }
+
+        input[type="file"] { display: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <div class="brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            Web Media Kit
+            <span class="badge">v1.0</span>
+        </div>
+        <a href="https://github.com/KeaganGilmore/web-media-kit" target="_blank" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">GitHub</a>
+    </div>
+</header>
+
+<div class="config-bar">
+    <div class="config-content">
+
+        <div class="control-section">
+            <label class="toggle-label">
+                <input type="checkbox" id="removeBgToggle">
+                <div class="toggle-switch"></div>
+                Remove White BG
+            </label>
+            <div class="input-group">
+                <label>Tolerance</label>
+                <input type="range" id="bgTolerance" min="1" max="50" value="15" title="Higher values remove light grays too">
+            </div>
+        </div>
+
+        <div class="control-section">
+            <label class="toggle-label" title="Automatically shrink to content bounds">
+                <input type="checkbox" id="autoTrimToggle" checked>
+                <div class="toggle-switch"></div>
+                Auto-Trim
+            </label>
+            <div class="input-group">
+                <label>Padding (px)</label>
+                <input type="number" id="padInput" class="control-input" value="0" min="0" style="width: 70px;">
+            </div>
+        </div>
+
+        <div class="control-section">
+            <div class="input-group">
+                <label>Max Size (KB)</label>
+                <input type="number" id="sizeInput" class="control-input" value="64" min="10" style="width: 70px;">
+            </div>
+            <div class="input-group">
+                <label>Format</label>
+                <select id="formatInput" class="control-input" style="width: 100px;">
+                    <option value="image/png">PNG</option>
+                    <option value="image/webp">WEBP</option>
+                    <option value="image/jpeg">JPEG</option>
+                </select>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<main>
+    <label class="upload-zone" id="dropZone">
+        <input type="file" id="fileInput" multiple accept="image/*">
+        <div class="icon-box">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        </div>
+        <div class="upload-text">
+            <h3 style="margin:0; font-size: 1.1rem;">Drop images here</h3>
+            <p style="margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.9rem;">
+                Background removal & Trim active based on settings above.
+            </p>
+        </div>
+    </label>
+
+    <div class="grid" id="gallery"></div>
+</main>
+
+<footer>
+    <div class="footer-content">
+        <a href="https://github.com/KeaganGilmore/" target="_blank" class="footer-link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+            GitHub
+        </a>
+        <span class="divider">|</span>
+
+        <a href="mailto:keagangilmore@gmail.com" class="footer-link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+            keagangilmore@gmail.com
+        </a>
+        <span class="divider">|</span>
+
+        <a href="#" onclick="copyDiscord(event)" class="footer-link" id="discordLink">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+            <span id="discordText">Discord: keagan2980</span>
+        </a>
+    </div>
+</footer>
+
+<div class="modal-overlay" id="cropModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Editor</h3>
+            <button onclick="closeModal()" style="border:none; background:none; cursor:pointer; font-size:1.5rem;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <img id="cropTarget" style="max-width: 100%; display: block;">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="processAndSave()">Process Selection</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script>
+    // --- UI REFERENCES ---
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const gallery = document.getElementById('gallery');
+
+    // Configs
+    const removeBgToggle = document.getElementById('removeBgToggle');
+    const bgTolerance = document.getElementById('bgTolerance');
+    const autoTrimToggle = document.getElementById('autoTrimToggle');
+    const padInput = document.getElementById('padInput');
+    const sizeInput = document.getElementById('sizeInput');
+    const formatInput = document.getElementById('formatInput');
+
+    // Modal State
+    let cropper = null;
+    let currentEditFile = null;
+    let currentEditCardId = null;
+
+    // --- UTILITY: Copy Discord ---
+    function copyDiscord(e) {
+        e.preventDefault();
+        const text = "keagan2980";
+        navigator.clipboard.writeText(text).then(() => {
+            const el = document.getElementById('discordText');
+            const original = el.innerText;
+            el.innerText = "Copied to Clipboard!";
+            el.style.color = "var(--primary)";
+            setTimeout(() => {
+                el.innerText = original;
+                el.style.color = "";
+            }, 2000);
+        });
+    }
+
+    // --- EVENT LISTENERS ---
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eName => {
+        dropZone.addEventListener(eName, e => { e.preventDefault(); e.stopPropagation(); }, false);
+    });
+    dropZone.addEventListener('dragover', () => dropZone.classList.add('drag-over'));
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', (e) => {
+        dropZone.classList.remove('drag-over');
+        handleFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+    function handleFiles(files) {
+        Array.from(files).forEach(file => processImage(file));
+    }
+
+    // --- MAIN PIPELINE ---
+    function processImage(file, manualCropCanvas = null, existingCardId = null) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                let canvas;
+
+                // 1. Initial Source
+                if (manualCropCanvas) {
+                    canvas = manualCropCanvas;
+                } else {
+                    canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    canvas.getContext('2d').drawImage(img, 0, 0);
+                }
+
+                const ctx = canvas.getContext('2d');
+                let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+                // 2. Remove White Background
+                if (removeBgToggle.checked) {
+                    imgData = removeWhiteBackground(imgData, parseInt(bgTolerance.value));
+                    ctx.putImageData(imgData, 0, 0);
+                }
+
+                // 3. Auto-Trim Logic
+                if (!manualCropCanvas && autoTrimToggle.checked) {
+                    canvas = performAutoTrim(canvas, ctx, imgData);
+                }
+
+                // 4. Apply Padding
+                const padding = parseInt(padInput.value) || 0;
+                const finalCanvas = document.createElement('canvas');
+                finalCanvas.width = canvas.width + (padding * 2);
+                finalCanvas.height = canvas.height + (padding * 2);
+                const finalCtx = finalCanvas.getContext('2d');
+
+                // FIX: Only fill white if JPEG
+                if (formatInput.value === 'image/jpeg') {
+                    finalCtx.fillStyle = '#FFFFFF';
+                    finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+                }
+
+                finalCtx.drawImage(canvas, padding, padding);
+
+                // 5. Optimize & Render
+                optimizeImage(finalCanvas, formatInput.value, parseInt(sizeInput.value), file, existingCardId);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // --- HELPER: Magic Eraser ---
+    function removeWhiteBackground(imgData, tolerance) {
+        const data = imgData.data;
+        const limit = 255 - tolerance;
+
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i], g = data[i+1], b = data[i+2];
+            if (r > limit && g > limit && b > limit) {
+                data[i+3] = 0; // Set Alpha to 0
+            }
+        }
+        return imgData;
+    }
+
+    // --- HELPER: Auto Trim ---
+    function performAutoTrim(canvas, ctx, imgData) {
+        const { minX, minY, maxX, maxY } = getBoundingBox(imgData);
+        if (minX <= maxX) {
+            const w = maxX - minX + 1;
+            const h = maxY - minY + 1;
+            const cropped = document.createElement('canvas');
+            cropped.width = w;
+            cropped.height = h;
+            cropped.getContext('2d').drawImage(canvas, minX, minY, w, h, 0, 0, w, h);
+            return cropped;
+        }
+        return canvas;
+    }
+
+    function getBoundingBox(imgData) {
+        const { data, width, height } = imgData;
+        let minX = width, minY = height, maxX = 0, maxY = 0;
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const i = (y * width + x) * 4;
+                if (data[i+3] > 0) { // Check transparency
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+            }
+        }
+        return { minX, minY, maxX, maxY };
+    }
+
+    // --- OPTIMIZER ---
+    function optimizeImage(canvas, format, targetKB, file, existingId) {
+        let scale = 1.0;
+
+        const perform = () => {
+            const tCanvas = document.createElement('canvas');
+            tCanvas.width = Math.floor(canvas.width * scale);
+            tCanvas.height = Math.floor(canvas.height * scale);
+            const ctx = tCanvas.getContext('2d');
+
+            // Fill background only for JPEG
+            if (format === 'image/jpeg') {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, tCanvas.width, tCanvas.height);
+            }
+
+            ctx.drawImage(canvas, 0, 0, tCanvas.width, tCanvas.height);
+
+            // PNG ignores 0.9 quality
+            const url = tCanvas.toDataURL(format, 0.9);
+
+            // Estimate size
+            const head = 'data:' + format + ';base64,';
+            const sizeBytes = Math.round((url.length - head.length) * 3 / 4);
+            const kb = sizeBytes / 1024;
+
+            // Loop if too big
+            if (kb > targetKB && scale > 0.1) {
+                scale -= 0.1;
+                perform();
+            } else {
+                renderCard(file, url, format, canvas.width, canvas.height, tCanvas.width, tCanvas.height, kb, existingId);
+            }
+        };
+        perform();
+    }
+
+    // --- RENDER ---
+    function renderCard(file, url, format, origW, origH, finalW, finalH, kb, existingId) {
+        const cardId = existingId || 'card-' + Date.now() + Math.random().toString(36).substr(2, 9);
+        const old = document.getElementById(cardId);
+        if (old) old.remove();
+
+        const extMap = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/webp': '.webp' };
+        const ext = extMap[format] || '.png';
+        const newName = file.name.replace(/\.[^/.]+$/, "") + ext;
+
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.id = cardId;
+        div.innerHTML = `
+            <div class="img-preview">
+                <img src="${url}">
+                <button class="edit-btn" onclick="openCropModal('${cardId}')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    Edit / Crop
+                </button>
+            </div>
+            <div class="card-details">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="file-name" title="${newName}" style="max-width: 60%;">${newName}</div>
+                    <span class="size-tag ${kb > sizeInput.value ? 'warning' : ''}">${kb.toFixed(1)} KB</span>
+                </div>
+                <div class="specs">
+                    <span>${origW}x${origH}</span>
+                    <span>→</span>
+                    <strong>${finalW}x${finalH}</strong>
+                </div>
+                <a href="${url}" download="${newName}" class="btn-download">Download</a>
+            </div>
+        `;
+        div.fileRef = file;
+        gallery.prepend(div);
+    }
+
+    // --- MODAL LOGIC ---
+    const modal = document.getElementById('cropModal');
+    const cropImg = document.getElementById('cropTarget');
+
+    window.openCropModal = function(cardId) {
+        const card = document.getElementById(cardId);
+        if (!card || !card.fileRef) return;
+        currentEditFile = card.fileRef;
+        currentEditCardId = cardId;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            cropImg.src = e.target.result;
+            modal.classList.add('active');
+            if (cropper) cropper.destroy();
+            cropper = new Cropper(cropImg, { viewMode: 1, autoCropArea: 0.8 });
+        };
+        reader.readAsDataURL(currentEditFile);
+    };
+
+    window.closeModal = function() {
+        modal.classList.remove('active');
+        if (cropper) { cropper.destroy(); cropper = null; }
+    };
+
+    window.processAndSave = function() {
+        if (!cropper) return;
+        const canvas = cropper.getCroppedCanvas();
+        processImage(currentEditFile, canvas, currentEditCardId);
+        closeModal();
+    };
+</script>
+
+</body>
+</html>
