@@ -174,6 +174,7 @@
         .btn-block { width: 100%; justify-content: center; }
 
         /* PDF TOOLS */
+        #pdfView, body[data-tab="pdf"] .header-content { max-width: 2400px; }
         .pdf-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 1.5rem; align-items: start; }
         .pdf-workspace { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
 
@@ -208,6 +209,8 @@
         .range-form { display: flex; gap: 6px; }
         .range-form .control-input { width: 110px; padding: 5px 8px; font-size: 0.8rem; }
         .ws-hint { margin: 0; text-align: center; font-size: 0.8rem; color: var(--text-muted); }
+        .zoom-control { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
+        .zoom-control input { width: 110px; accent-color: var(--primary); margin: 0; }
 
         .btn-chip {
             border: 1px solid var(--border); background: var(--surface); color: var(--text-main); border-radius: 6px;
@@ -223,7 +226,8 @@
         .icon-btn.danger:hover:not(:disabled) { border-color: #dc2626; color: #dc2626; }
         .icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-        .page-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; }
+        /* --thumb-size is driven by the page-size slider; min() stops one huge column overflowing small screens */
+        .page-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--thumb-size, 180px), 100%), 1fr)); gap: 1rem; }
         .page-card {
             position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px;
             cursor: pointer; user-select: none; transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
@@ -237,13 +241,15 @@
         }
         .page-card.drop-before::before { left: -10px; }
         .page-card.drop-after::after { right: -10px; }
-        .page-thumb { position: relative; aspect-ratio: 1; border-radius: 6px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; }
-        /* Square box + object-fit means a 90° CSS rotation always stays inside the frame */
-        .page-thumb canvas {
+        /* Portrait box suits most documents; --fit (set in JS) scales pages turned sideways back inside it.
+           Keep the aspect-ratio in sync with THUMB_ASPECT. */
+        .page-thumb { position: relative; aspect-ratio: 3 / 4; border-radius: 6px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; }
+        .page-thumb img {
             position: absolute; inset: 8px; width: calc(100% - 16px); height: calc(100% - 16px); object-fit: contain;
-            filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.18)); transform: rotate(var(--rot, 0deg)); transition: transform 0.25s ease;
+            filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.18)); transition: transform 0.25s ease;
+            transform: rotate(var(--rot, 0deg)) scale(var(--fit, 1));
         }
-        .thumb-placeholder { width: 55%; aspect-ratio: 1 / 1.414; background: white; border-radius: 2px; animation: pulse 1.2s ease-in-out infinite; }
+        .thumb-placeholder { width: 65%; aspect-ratio: 1 / 1.414; background: white; border-radius: 2px; animation: pulse 1.2s ease-in-out infinite; }
         @keyframes pulse { 50% { opacity: 0.5; } }
         .page-check {
             position: absolute; top: 14px; left: 14px; width: 20px; height: 20px; border-radius: 6px; box-sizing: border-box;
@@ -309,7 +315,7 @@
             .pdf-panel { position: static; max-height: none; overflow: visible; }
         }
         @media (max-width: 600px) {
-            .page-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.75rem; }
+            .page-grid { gap: 0.75rem; }
         }
 
         /* FOOTER */
@@ -482,6 +488,11 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
                 </div>
+                <label class="zoom-control" title="Page size">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                    <input type="range" id="pdfZoom" min="120" max="800" step="10" aria-label="Page size">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                </label>
             </div>
 
             <div class="page-grid" id="pdfGrid"></div>
@@ -527,6 +538,23 @@
                 </div>
                 <button class="btn btn-primary btn-block" id="pdfSplitBtn" disabled><span>Split</span></button>
                 <p id="pdfSplitNote"></p>
+            </div>
+
+            <div class="panel-card">
+                <h4>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                    Compress
+                </h4>
+                <div class="input-group">
+                    <label for="pdfCompressLevel">Level</label>
+                    <select id="pdfCompressLevel" class="control-input">
+                        <option value="balanced">Balanced</option>
+                        <option value="strong">Strong</option>
+                        <option value="max">Maximum (flatten pages)</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary btn-block" id="pdfCompressBtn" disabled><span>Compress</span></button>
+                <p id="pdfCompressNote"></p>
             </div>
 
             <div class="panel-card">
@@ -903,6 +931,7 @@
             t.setAttribute('aria-selected', active);
         });
         document.querySelectorAll('[data-view]').forEach(v => { v.hidden = v.dataset.view !== name; });
+        document.body.dataset.tab = name;
         if (name === 'pdf') loadPdfLibs().catch(() => {}); // warm up before the first drop
     }
 
@@ -956,6 +985,7 @@
     const pdfRangeInput = document.getElementById('pdfRangeInput');
     const pdfGrid = document.getElementById('pdfGrid');
     const pdfHint = document.getElementById('pdfHint');
+    const pdfZoom = document.getElementById('pdfZoom');
 
     const pdfNameInput = document.getElementById('pdfNameInput');
     const pdfMergeBtn = document.getElementById('pdfMergeBtn');
@@ -967,6 +997,9 @@
     const pdfGroupsInput = document.getElementById('pdfGroupsInput');
     const pdfSplitBtn = document.getElementById('pdfSplitBtn');
     const pdfSplitNote = document.getElementById('pdfSplitNote');
+    const pdfCompressLevel = document.getElementById('pdfCompressLevel');
+    const pdfCompressBtn = document.getElementById('pdfCompressBtn');
+    const pdfCompressNote = document.getElementById('pdfCompressNote');
     const pdfImgFormat = document.getElementById('pdfImgFormat');
     const pdfImgDpi = document.getElementById('pdfImgDpi');
     const pdfImagesBtn = document.getElementById('pdfImagesBtn');
@@ -980,13 +1013,20 @@
 
     // --- PDF STATE ---
     const SOURCE_COLORS = ['#4f46e5', '#0891b2', '#16a34a', '#d97706', '#db2777', '#7c3aed', '#dc2626', '#0d9488'];
-    const THUMB_PX = 320;
+    const THUMB_ASPECT = 3 / 4; // width / height of .page-thumb, keep in sync with the CSS
+    const THUMB_STEP = 160;     // thumbnail resolution grows in steps so resizing doesn't re-render constantly
+    const THUMB_MAX = 2000;
     const PAGE_SIZES = { a4: [595.28, 841.89], letter: [612, 792] }; // points
     const IMG_EXT = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/webp': '.webp' };
+    const COMPRESS_LEVELS = {
+        balanced: { maxPx: 1600, quality: 0.7, note: 'Re-encodes embedded photos and scans at up to 1600px and 70% quality. Text and vector graphics stay sharp.' },
+        strong: { maxPx: 1000, quality: 0.5, note: 'Re-encodes images at up to 1000px and 50% quality for smaller files and softer photos. Text stays sharp.' },
+        max: { dpi: 110, quality: 0.6, note: "Turns every page into a 110 DPI image. Best for scans, but text can't be selected or searched afterwards." }
+    };
 
     const pdfState = {
         sources: new Map(), // id -> { id, name, color, bytes, doc (pdf.js), libDoc (pdf-lib, loaded on first export) }
-        pages: [],          // workspace order: { id, sourceId, index, rotation, el }
+        pages: [],          // workspace order: { id, sourceId, index, rotation, el, thumbUrl, renderedPx, aspect }
         selected: new Set(),
         anchorId: null,     // last clicked page, for shift-click ranges
         outputs: [],
@@ -994,6 +1034,7 @@
     };
     let pdfSeq = 0;
     let colorSeq = 0;
+    let thumbPx = 320; // longest side new thumbnails render at; follows the on-screen card size
 
     // --- HELPERS ---
     const ICONS = {
@@ -1102,7 +1143,7 @@
         const src = { id: 's' + (++pdfSeq), name, bytes, doc, libDoc: null, color: SOURCE_COLORS[colorSeq++ % SOURCE_COLORS.length] };
         pdfState.sources.set(src.id, src);
         for (let i = 0; i < doc.numPages; i++) {
-            pdfState.pages.push({ id: 'p' + (++pdfSeq), sourceId: src.id, index: i, rotation: 0, el: null });
+            pdfState.pages.push({ id: 'p' + (++pdfSeq), sourceId: src.id, index: i, rotation: 0, el: null, thumbUrl: null, renderedPx: 0, aspect: 0 });
         }
         renderPdfWorkspace();
     }
@@ -1175,13 +1216,58 @@
             if (!entry.isIntersecting) return;
             thumbObserver.unobserve(entry.target);
             const page = entry.target.pageRef;
-            thumbQueue = thumbQueue.then(async () => {
-                if (!page.el.isConnected) return; // removed while waiting its turn
-                const canvas = await renderPageCanvas(page, { maxPx: THUMB_PX });
-                page.el.querySelector('.page-thumb').replaceChildren(canvas);
-            }).catch(err => console.error(err));
+            thumbQueue = thumbQueue.then(() => renderThumbnail(page)).catch(err => console.error(err));
         });
     }, { rootMargin: '600px 0px' });
+
+    async function renderThumbnail(page) {
+        // Skip pages removed while waiting, or already rendered sharp enough for the current card size
+        if (!page.el.isConnected || page.renderedPx >= thumbPx) return;
+        const target = thumbPx;
+        const canvas = await renderPageCanvas(page, { maxPx: target });
+        const blob = await canvasToBlob(canvas, 'image/jpeg', 0.9);
+        page.aspect = canvas.width / canvas.height;
+        canvas.width = canvas.height = 0;
+        if (!page.el.isConnected) return;
+
+        // Kept as compressed images so the browser can drop decoded pixels for offscreen pages
+        const box = page.el.querySelector('.page-thumb');
+        let img = box.querySelector('img');
+        if (!img) {
+            img = document.createElement('img');
+            img.alt = '';
+            img.draggable = false; // let the card handle drags, not the image
+            box.replaceChildren(img);
+        }
+        const oldUrl = page.thumbUrl;
+        page.thumbUrl = URL.createObjectURL(blob);
+        img.src = page.thumbUrl;
+        if (oldUrl) URL.revokeObjectURL(oldUrl);
+        page.renderedPx = target;
+        page.el.style.setProperty('--fit', thumbFit(page));
+    }
+
+    // Scale that keeps a page turned 90° or 270° inside the portrait thumbnail box
+    function thumbFit(page) {
+        if (!page.aspect || normRotation(page.rotation) % 180 === 0) return 1;
+        const c = THUMB_ASPECT, a = page.aspect;
+        const [w, h] = a > c ? [1, 1 / a] : [a / c, 1 / c]; // page size inside the box, box width = 1
+        return Math.min(1 / h, 1 / c / w);                     // once turned, h becomes the width and w the height
+    }
+
+    // Match render resolution to the real card size (zoom, window size, high-DPI screens) and re-render pages that are too soft
+    function updateThumbResolution() {
+        const box = pdfGrid.querySelector('.page-thumb');
+        if (!box?.clientHeight) return; // hidden tab or empty workspace
+        thumbPx = Math.min(THUMB_MAX, Math.ceil(box.clientHeight * devicePixelRatio / THUMB_STEP) * THUMB_STEP);
+        pdfState.pages.forEach(p => { if (p.renderedPx < thumbPx) thumbObserver.observe(p.el); });
+    }
+
+    let thumbResTimer = null;
+    function scheduleThumbResolution() {
+        clearTimeout(thumbResTimer);
+        thumbResTimer = setTimeout(updateThumbResolution, 150);
+    }
 
     function createPageCard(page) {
         const src = pdfState.sources.get(page.sourceId);
@@ -1223,6 +1309,7 @@
             cursor.remove();
             cursor = next;
         }
+        updateThumbResolution(); // before the observer fires, so first renders are already the right size
         renderChips();
         updatePdfUI();
     }
@@ -1293,6 +1380,9 @@
         pdfSplitNote.textContent = groupsMode
             ? 'Numbers match the page badges, so reorder first if you need to.'
             : 'Uses the selected pages, or every page when nothing is selected.';
+        pdfCompressBtn.disabled = busy || !total;
+        setLabel(pdfCompressBtn, total ? `Compress ${scope}` : 'Compress');
+        pdfCompressNote.textContent = COMPRESS_LEVELS[pdfCompressLevel.value].note;
         pdfImagesBtn.disabled = pdfTextBtn.disabled = busy || !total;
         setLabel(pdfImagesBtn, total ? `${Scope} → images` : 'PDF → images');
         setLabel(pdfTextBtn, total ? `${Scope} → text (.txt)` : 'PDF → text (.txt)');
@@ -1319,13 +1409,17 @@
         pages.forEach(p => {
             p.rotation += deg;
             p.el.style.setProperty('--rot', `${p.rotation}deg`);
+            p.el.style.setProperty('--fit', thumbFit(p));
         });
     }
 
     function removePages(pages) {
         const doomed = new Set(pages);
         pdfState.pages = pdfState.pages.filter(p => !doomed.has(p));
-        pages.forEach(p => pdfState.selected.delete(p.id));
+        pages.forEach(p => {
+            pdfState.selected.delete(p.id);
+            if (p.thumbUrl) URL.revokeObjectURL(p.thumbUrl);
+        });
         // Drop files that no longer have any pages in the workspace
         const inUse = new Set(pdfState.pages.map(p => p.sourceId));
         for (const src of pdfState.sources.values()) {
@@ -1471,11 +1565,28 @@
         }
     });
 
+    // Page size slider. The default scales with the screen so big monitors get big pages.
+    function setThumbSize(px) {
+        pdfZoom.value = px;
+        pdfGrid.style.setProperty('--thumb-size', `${px}px`);
+    }
+    let savedZoom = null;
+    try { savedZoom = localStorage.getItem('wmk.pdfZoom'); } catch (e) { /* storage unavailable, use the default */ }
+    setThumbSize(savedZoom || Math.round(Math.min(320, Math.max(160, innerWidth / 8)) / 10) * 10);
+
+    pdfZoom.addEventListener('input', () => {
+        setThumbSize(pdfZoom.value);
+        scheduleThumbResolution();
+        try { localStorage.setItem('wmk.pdfZoom', pdfZoom.value); } catch (e) { /* not remembered, that's fine */ }
+    });
+    new ResizeObserver(scheduleThumbResolution).observe(pdfGrid);
+
     pdfSplitMode.addEventListener('change', () => {
         pdfChunkField.hidden = pdfSplitMode.value !== 'chunk';
         pdfGroupsField.hidden = pdfSplitMode.value !== 'groups';
         updatePdfUI();
     });
+    pdfCompressLevel.addEventListener('change', updatePdfUI);
 
     // --- BUILDING OUTPUT ---
     async function loadLibDoc(src) {
@@ -1492,6 +1603,10 @@
     }
 
     async function buildPdf(pages) {
+        return (await buildPdfDoc(pages)).save();
+    }
+
+    async function buildPdfDoc(pages) {
         const out = await PDFLib.PDFDocument.create();
         // Copy each source's pages in a single call so shared fonts and images are only embedded once
         const copies = new Array(pages.length);
@@ -1506,7 +1621,137 @@
             copy.setRotation(PDFLib.degrees(normRotation(copy.getRotation().angle + pages[i].rotation)));
             out.addPage(copy);
         });
+        return out;
+    }
+
+    // --- COMPRESSION ---
+    // Re-encodes the embedded images of a rebuilt document as smaller JPEGs. Text, fonts and vector content are untouched.
+    async function recompressPdf(pages, level) {
+        const { PDFName, PDFRawStream } = PDFLib;
+        const doc = await buildPdfDoc(pages);
+        const images = [];
+        const masks = new Set(); // soft masks (transparency) stay lossless
+        for (const [ref, obj] of doc.context.enumerateIndirectObjects()) {
+            if (!(obj instanceof PDFRawStream) || obj.dict.get(PDFName.of('Subtype')) !== PDFName.of('Image')) continue;
+            images.push([ref, obj]);
+            const smask = obj.dict.get(PDFName.of('SMask'));
+            if (smask) masks.add(smask);
+        }
+        for (const [i, [ref, obj]] of images.entries()) {
+            if (masks.has(ref)) continue;
+            showToast(`Compressing image ${i + 1} of ${images.length}…`, 'busy');
+            try {
+                const smaller = await recompressImage(doc.context, obj, level);
+                if (smaller) doc.context.assign(ref, smaller);
+            } catch (err) {
+                console.warn('Left an image as-is:', err); // unusual encodings are kept rather than failing the whole file
+            }
+        }
+        return doc.save();
+    }
+
+    // Number of colour channels for colour spaces a browser JPEG round-trip handles, otherwise 0 (CMYK, indexed, spot…)
+    function colorComponents(cs) {
+        const { PDFName, PDFArray } = PDFLib;
+        if (cs === PDFName.of('DeviceRGB')) return 3;
+        if (cs === PDFName.of('DeviceGray')) return 1;
+        if (cs instanceof PDFArray && cs.lookup(0) === PDFName.of('ICCBased')) {
+            const n = cs.lookup(1).dict.lookup(PDFName.of('N'))?.asNumber();
+            return n === 3 || n === 1 ? n : 0;
+        }
+        return 0;
+    }
+
+    async function recompressImage(context, stream, { maxPx, quality }) {
+        const { PDFName } = PDFLib;
+        const get = key => stream.dict.lookup(PDFName.of(key));
+        // Stencil masks, colour-key masks and inverted decodes don't survive lossy re-encoding
+        if (get('ImageMask') || get('Mask') || get('Decode')) return null;
+        const width = get('Width')?.asNumber();
+        const height = get('Height')?.asNumber();
+        const comps = colorComponents(get('ColorSpace'));
+        if (!width || !height || !comps || get('BitsPerComponent')?.asNumber() !== 8) return null;
+        const source = await decodeImageStream(stream, width, height, comps);
+        if (!source) return null;
+
+        const scale = Math.min(1, maxPx / Math.max(width, height));
+        const w = Math.max(1, Math.round(width * scale));
+        const h = Math.max(1, Math.round(height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(source, 0, 0, w, h);
+        if (source.close) source.close();
+        const jpeg = new Uint8Array(await (await canvasToBlob(canvas, 'image/jpeg', quality)).arrayBuffer());
+        canvas.width = canvas.height = 0;
+        if (jpeg.length >= stream.contents.length) return null; // never make an image bigger
+
+        const smask = stream.dict.get(PDFName.of('SMask'));
+        return context.stream(jpeg, {
+            Type: 'XObject', Subtype: 'Image', Width: w, Height: h, BitsPerComponent: 8,
+            ColorSpace: 'DeviceRGB', Filter: 'DCTDecode', ...(smask ? { SMask: smask } : {})
+        });
+    }
+
+    // Decodes the two encodings that cover most photos and scans: JPEG, and deflated raw pixels
+    async function decodeImageStream(stream, width, height, comps) {
+        const { PDFName, PDFArray, PDFDict } = PDFLib;
+        let filter = stream.dict.lookup(PDFName.of('Filter'));
+        let parms = stream.dict.lookup(PDFName.of('DecodeParms'));
+        if (filter instanceof PDFArray) filter = filter.size() === 1 ? filter.lookup(0) : null;
+        if (parms instanceof PDFArray) parms = parms.lookup(0);
+
+        if (filter === PDFName.of('DCTDecode')) {
+            return createImageBitmap(new Blob([stream.contents], { type: 'image/jpeg' }));
+        }
+        if (filter !== PDFName.of('FlateDecode')) return null; // JBIG2, CCITT, JPEG 2000…
+        if (parms instanceof PDFDict && (parms.lookup(PDFName.of('Predictor'))?.asNumber() || 1) > 1) return null;
+
+        const raw = PDFLib.decodePDFRawStream(stream).decode();
+        if (raw.length < width * height * comps) return null;
+        const rgba = new Uint8ClampedArray(width * height * 4);
+        const g = comps === 3 ? 1 : 0, b = comps === 3 ? 2 : 0; // grey images reuse the one channel
+        for (let p = 0, s = 0; p < rgba.length; p += 4, s += comps) {
+            rgba[p] = raw[s];
+            rgba[p + 1] = raw[s + g];
+            rgba[p + 2] = raw[s + b];
+            rgba[p + 3] = 255;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').putImageData(new ImageData(rgba, width, height), 0, 0);
+        return canvas;
+    }
+
+    // Strongest option: every page becomes one JPEG. Rotation is baked in.
+    async function rasterizePdf(pages, { dpi, quality }) {
+        const out = await PDFLib.PDFDocument.create();
+        for (const [i, page] of pages.entries()) {
+            showToast(`Flattening page ${i + 1} of ${pages.length}…`, 'busy');
+            const canvas = await renderPageCanvas(page, { scale: dpi / 72, extraRotation: page.rotation });
+            const jpeg = new Uint8Array(await (await canvasToBlob(canvas, 'image/jpeg', quality)).arrayBuffer());
+            const image = await out.embedJpg(jpeg);
+            const w = canvas.width * 72 / dpi, h = canvas.height * 72 / dpi;
+            out.addPage([w, h]).drawImage(image, { x: 0, y: 0, width: w, height: h });
+            canvas.width = canvas.height = 0;
+        }
         return out.save();
+    }
+
+    // What "before" means: the original files when whole files are compressed, otherwise the same pages rebuilt as-is
+    async function compressionBaseline(pages) {
+        const counts = new Map();
+        pages.forEach(p => counts.set(p.sourceId, (counts.get(p.sourceId) || 0) + 1));
+        let total = 0;
+        for (const [id, n] of counts) {
+            const src = pdfState.sources.get(id);
+            if (n !== src.doc.numPages) return (await buildPdf(pages)).length;
+            total += src.bytes.length;
+        }
+        return total;
     }
 
     async function pdfOutput(name, pages) {
@@ -1535,9 +1780,11 @@
         updatePdfUI();
         showToast(message, 'busy');
         try {
-            const outputs = await task();
+            // Tasks return their outputs, or { outputs, message, type } to report something more specific
+            const result = await task();
+            const outputs = Array.isArray(result) ? result : result.outputs;
             addOutputs(outputs);
-            showToast(`Created ${plural(outputs.length, 'file')}`, 'success');
+            showToast(result.message || `Created ${plural(outputs.length, 'file')}`, result.type || 'success');
         } catch (err) {
             console.error(err);
             showToast(err.message, 'error');
@@ -1564,6 +1811,30 @@
             outputs.push(await pdfOutput(`${outputBase()}-${pagesTag(pagePositions(group))}.pdf`, group));
         }
         return outputs;
+    }));
+
+    pdfCompressBtn.addEventListener('click', () => runPdfTask('Compressing…', async () => {
+        const pages = pdfState.selected.size ? selectedPages() : pdfState.pages.slice();
+        const level = COMPRESS_LEVELS[pdfCompressLevel.value];
+        const before = await compressionBaseline(pages);
+        const bytes = level.dpi ? await rasterizePdf(pages, level) : await recompressPdf(pages, level);
+        const saved = Math.round((1 - bytes.length / before) * 100);
+        const sizes = `${formatBytes(before)} → ${formatBytes(bytes.length)}`;
+        let message = `Compressed ${sizes} (${saved}% smaller)`;
+        if (saved <= 0) {
+            message = level.dpi
+                ? `Flattening made this bigger (${sizes}), which happens with text-heavy pages. Try Balanced.`
+                : `Nothing more to shrink at this level (${sizes}). Its images may already be compact.`;
+        }
+        return {
+            outputs: [{
+                name: `${outputBase()}-compressed.pdf`,
+                blob: new Blob([bytes], { type: 'application/pdf' }),
+                meta: `${plural(pages.length, 'page')} · ${saved > 0 ? '−' : '+'}${Math.abs(saved)}%`
+            }],
+            message,
+            type: saved > 0 ? 'success' : 'info'
+        };
     }));
 
     pdfImagesBtn.addEventListener('click', () => runPdfTask('Rendering…', async () => {

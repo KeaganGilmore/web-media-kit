@@ -18,11 +18,13 @@ A simple, client-side web application for processing images and PDFs directly in
 
 ### PDF Tools
 - **One Workspace**: Drop any mix of PDFs and images; every page appears as a thumbnail, colour-coded by source file
+- **Adjustable Page Size**: The workspace stretches to wide screens, and a size slider (remembered between visits) enlarges pages, which re-render sharply at any size
 - **Select Pages**: Click, shift-click for a range, or type ranges like `1-3, 5, 8-end`
 - **Reorder, Rotate, Remove**: Drag pages (or a whole selection) into place, rotate in 90° steps, delete what you don't need
 - **Merge**: Combine every page, across all files, into one PDF in the order shown
 - **Extract**: Build a new PDF from just the selected pages, then repeat to dice one document into several
 - **Split**: One PDF per page, every N pages, or custom groups like `1-3; 4, 6-8; 9-end` (each `;` is a new file)
+- **Compress**: *Balanced* and *Strong* re-encode embedded photos and scans (up to 1600px / 70% or 1000px / 50%) while text and vector graphics stay untouched; *Maximum* flattens each page to an image, which suits scans best
 - **PDF → Images**: Export pages as PNG, JPEG or WEBP at 72, 150 or 300 DPI
 - **PDF → Text**: Extract the text layer to a `.txt` file
 - **Images → PDF**: Dropped images become pages, sized to the image, A4 or US Letter
